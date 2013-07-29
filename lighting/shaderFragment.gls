@@ -1,0 +1,44 @@
+#version 330 core
+
+uniform vec4 vertexColor;
+uniform vec3 lightPosition;
+
+in vec4 finalColor;
+in vec3 Position_worldspace;
+in vec3 Normal_cameraspace;
+in vec3 EyeDirection_cameraspace;
+in vec3 LightDirection_cameraspace;
+
+out vec3 color;
+ 
+void main() {
+	//vec3 LightColor = vec3(1.0f, 1.0f, 1.0f);
+	//float LightPower = 2.0f;
+	//float LightPower = 100.0f;
+
+	//vec3 AmbientColor = vec3(0.1f, 0.1f, 0.1f) * vertexColor.rgb;
+	//vec3 SpecularColor = vec3(0.3f, 0.3f, 0.3f);
+
+	//float distance = length( lightPosition - Position_worldspace );
+
+	//vec3 n = normalize( Normal_cameraspace );
+	//vec3 l = normalize( LightDirection_cameraspace );
+
+	// Cosine of the angle between the normal and the light direction,
+	// clamped above 0
+	//  - light is at the vertical of the triangle -> 1
+	//  - light is perpendicular to the triangle -> 0
+	//float cosTheta = clamp( dot( n,l ), 0, 1);
+
+	//vec3 e = normalize( eyeDirection );
+	//vec3 r = reflect( -l, n );
+
+	//float cosAlpha = clamp( dot(e,r), 0, 1 );
+
+	//color = vertexColor;
+
+	//vec3 finalColor = vertexColor.rgb * LightColor * LightPower * cosTheta / (distance);
+	//finalColor = vec3(0, 0, 0);
+	//color = AmbientColor + vertexColor.rgb * LightColor * LightPower * cosTheta / (distance*distance) + SpecularColor * LightColor * LightPower * pow(cosAlpha, 5) / (distance * distance);
+	color = finalColor.rgb;
+}

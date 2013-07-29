@@ -1,0 +1,10 @@
+#version 330 core
+
+in vec3 fragmentColor;
+out vec3 color;
+ 
+void main(){
+	//Does commenting this color line cause fragments to never be rendered, or just be colored in black?
+	//color = vec3(1, 0, 0);
+	color = fragmentColor;
+}

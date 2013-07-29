@@ -1,0 +1,17 @@
+#version 330 core
+
+layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec3 vertexColor;
+
+uniform mat4 model;
+uniform mat4 projection;
+
+//uniform vec3 vertexColor;
+smooth out vec3 fragmentColor;
+
+void main() { 
+	mat4 MVP = projection * model;
+ 	gl_Position = MVP * vec4(vertexPosition.xyz, 1.0f);
+
+	fragmentColor = vertexColor.rgb;
+}
