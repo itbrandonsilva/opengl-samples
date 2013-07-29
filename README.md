@@ -15,6 +15,7 @@ $ premake4 TARGET    // Possible targets are in the premake4 docs.
 * Tidy up code, especially the lighting code.
 * Modularize repeated code into projects and require them as dependencies.
 * Improve premake4.lua to support environment variables for people who like to keep their libraries in one place.
+* Add sample specific README.md's.
 
 ### Question or problems?
 _itbrandonsilva@gmail.com_
