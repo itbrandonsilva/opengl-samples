@@ -7,9 +7,9 @@
 
 ### Usage
 
-Place library directories in the same directory as premake4.lua, then:
+Place library directories in the same directory as premake4.lua, then in the same directory as premake4.lua:
 
-$ premake4 <TARGET>    -- Possible targets are in the premake4 docs.
+$ premake4 TARGET    // Possible targets are in the premake4 docs.
 
 ### To-do's
 * Tidy up code, especially the lighting code.
