@@ -2,7 +2,7 @@
 
 ## Required Libraries
 * GLEW
-* GFLW
+* GLFW
 * GLM
 
 ### Usage
