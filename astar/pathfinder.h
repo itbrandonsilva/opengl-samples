@@ -155,7 +155,7 @@ Path FindPath(int (&map)[x][y], int startX, int startY, int endX, int endY) {
 
 				// Is the path to this tile through the current tile a better path?
 				if (gcost < OpenList[tileIndex]->gcost) {
-					OpenList[tileIndex]->pid == ptile->id;
+					OpenList[tileIndex]->pid = ptile->id;
 					OpenList[tileIndex]->gcost = gcost;
 					OpenList[tileIndex]->fcost = gcost + OpenList[tileIndex]->hcost;
 				}
