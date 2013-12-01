@@ -1,0 +1,10 @@
+*.ilk
+*.pdb
+*.exe
+*.sdf
+*.sln
+*.suo
+*.opensdf
+*.swp
+*.vcxproj
+*.vcxproj.*

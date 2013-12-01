@@ -15,10 +15,13 @@ using namespace std;
 #define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 768
 
+int w;
+int h;
+
 GLuint ShaderId;
 GLuint vbID;
 int numPoints = 0;
-glm::vec3 vertices[1000];
+glm::vec3 vertices[100000];
 
 #include "BTT.h"
 #include "input.h"
@@ -141,7 +144,7 @@ bool InitializeWindow() {
 	ShaderId = LoadShaders( "shaderVertex.gls", "shaderFragment.gls" );
 	glUseProgram(ShaderId);
  
-	glfwSetWindowTitle( "A* Pathfinding" );
+	glfwSetWindowTitle( "BinTriTree" );
 
 	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
@@ -161,7 +164,8 @@ bool InitializeWindow() {
 	// glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
 	glClearColor((float)250/255, (float)250/255, (float)210/255, 0.0f);
 
-	glLineWidth(2.5f);
+	//glLineWidth(2.5f);
+	glLineWidth(0.5f);
 
 	// Disables backface culling; needed for transparency?
 	//glDisable(GL_CULL_FACE);
@@ -177,94 +181,102 @@ bool InitializeWindow() {
 
 	char thePath[256];
 	_getcwd(thePath, 255);
-	cout << "\nWorking Directory: \n" << thePath;
+	cout << "\nWorking Directory: " << thePath << std::endl;
 
 	return true;
 }
 
+GLubyte *pixels;
+GLint internalFormat, width, height;
+int LoadHeightmap() {
+
+	GLuint textureId = 1;
+	glGenTextures(1, &textureId);
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	// Image must not be grayscale; convert it to RGBA if it is.
+	glfwLoadTexture2D( "heightmap.tga", GLFW_ALPHA_MAP_BIT );
+
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width); // get width of GL texture
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height); // get height of GL texture
+
+	// Is there a better way to allocate this memory in C++?
+	int bytes = width * height * 4;
+	pixels = (GLubyte *)malloc(width*height*4);
+
+	// Store pixel data in memory for LOD.
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+	for (int x = 0; x < width; ++x) {
+		for (int y = 0; y < height; ++y) {
+
+			// Heightmaps don't render the same in every editor.
+			int addr = ((y*width) + x)*4;
+			pixels[addr]    = (int)pixels[addr] / 2;
+
+		}
+	}
+
+	w = width;
+	h = height;
+
+	return 0;
+}
+
+void InitTrees() {
+	
+	TreeOne = new BTT();
+	TreeTwo = new BTT();
+
+}
+
 void InitBuffers() {
-
-	TreeOne->Split();
-
-	TreeTwo->Split();
-	TreeTwo->left->Split();
-	TreeTwo->left->left->Split();
-	TreeTwo->left->left->right->Split();
-	TreeTwo->left->left->right->right->Split();
-	TreeTwo->left->left->right->right->left->Split();
-	TreeTwo->right->Split();
-
-	/*
-	numPoints = 8;
-	vertices[0] = glm::vec3(0, 0, 0);
-	vertices[1] = glm::vec3(w, 0, 0);
-
-	vertices[2] = glm::vec3(w, 0, 0);
-	vertices[3] = glm::vec3(w, 0, h);
-
-	vertices[4] = glm::vec3(w, 0, h);
-	vertices[5] = glm::vec3(0, 0, h);
-
-	vertices[6] = glm::vec3(0, 0, h);
-	vertices[7] = glm::vec3(0, 0, 0);
-	*/
 
 	glGenBuffers(1, &vbID);
 	glBindBuffer(GL_ARRAY_BUFFER, vbID);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
 }
 
-int totalLeaves = 0;
+int maxDepth = 12;
+int ReadVerticesFromBTT( BTT *tri, float apexX, float apexY, float leftX, float leftY, float rightX, float rightY, int depth) {
 
-//(TreeOne, 0, 0, w, 0, 0, h)
+	tri->Split();
 
-int ReadVerticesFromBTT( 
-						BTT *tri,
-						float apexX,
-						float apexY, 
-						float leftX, 
-						float leftY, 
-						float rightX,
-						float rightY) {
+	if (depth >= maxDepth) {
 
-	if (tri->hasChildren()) { 
-		// How!?!?
-		float centerX = (leftX+rightX)/2; 
-		float centerY = (leftY+rightY)/2; 
+		int addr;
 
-		cout << "\nCenterX: " << centerX;
-		cout << "\nCenterY: " << centerY;
+		addr = (((apexY-1)*width) + (apexX-1))*4;
+		vertices[numPoints+0] = glm::vec3(apexX, (int)pixels[addr], apexY);
+		addr = (((rightY-1)*width) + (rightX-1))*4;
+		vertices[numPoints+1] = glm::vec3(rightX, (int)pixels[addr], rightY);
 
-		ReadVerticesFromBTT(tri->left, centerX, centerY, apexX, apexY, leftX, leftY); 
-		ReadVerticesFromBTT(tri->right, centerX, centerY, rightX, rightY, apexX, apexY); 
+		addr = (((rightY-1)*width) + (rightX-1))*4;		
+		vertices[numPoints+2] = glm::vec3(rightX, (int)pixels[addr], rightY);
+		addr = (((leftY-1)*width) + (leftX-1))*4;
+		vertices[numPoints+3] = glm::vec3(leftX, (int)pixels[addr], leftY);
 
-	} else { 
-		// This triangle is a leaf of the tree so it should be 
-		// rendered. You know the 2D coordinates of each of the 
-		// vertices, so you should be able to easily obtain the 
-		// third vertex from your height map! 
-
-		totalLeaves++;
-
-		vertices[numPoints+0] = glm::vec3(apexX, 0, apexY);
-		vertices[numPoints+1] = glm::vec3(rightX, 0, rightY);
-
-		vertices[numPoints+2] = glm::vec3(rightX, 0, rightY);
-		vertices[numPoints+3] = glm::vec3(leftX, 0, leftY);
-
-		vertices[numPoints+4] = glm::vec3(leftX, 0, leftY);
-		vertices[numPoints+5] = glm::vec3(apexX, 0, apexY);
+		addr = (((leftY-1)*width) + (leftX-1))*4;
+		vertices[numPoints+4] = glm::vec3(leftX, (int)pixels[addr], leftY);
+		addr = (((apexY-1)*width) + (apexX-1))*4;
+		vertices[numPoints+5] = glm::vec3(apexX, (int)pixels[addr], apexY);
 
 		numPoints+=6;
+
+	} else {
+
+		float centerX = (leftX+rightX)/2; 
+		float centerY = (leftY+rightY)/2;
+
+		ReadVerticesFromBTT(tri->left, centerX, centerY, apexX, apexY, leftX, leftY, depth+1);
+		ReadVerticesFromBTT(tri->right, centerX, centerY, rightX, rightY, apexX, apexY, depth+1);
+
 	} 
 
 	return 1;
-} 
+}
 
 void Render() {
-
-	int w = 15;
-	int h = 15;
 
 	GLuint ModelUniform = glGetUniformLocation(ShaderId, "model");
 	GLuint ViewUniform = glGetUniformLocation(ShaderId, "view");
@@ -277,18 +289,19 @@ void Render() {
 	glUniformMatrix4fv(ModelUniform, 1, GL_FALSE, &model[0][0]);
 
 	glm::mat4 view = glm::lookAt(
-		glm::vec3(0, 10.0f, -10.0f),
+		glm::vec3(0.0f, 500.0f, -500.0f),
 		glm::vec3(0, 0, 0),
 		glm::vec3(0, 1, 0)
 	);
 	glUniformMatrix4fv(ViewUniform, 1, GL_FALSE, &view[0][0]);
 
 	glm::mat4 projection = glm::perspective(
-		75.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
-		4.0f / 3.0f, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
-		0.1f,        // Near clipping plane. Keep as big as possible, or you'll get precision issues.
-		100.0f       // Far clipping plane. Keep as little as possible.
+		75.0f,			// The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
+		4.0f / 3.0f,	// Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
+		0.1f,			// Near clipping plane. Keep as big as possible, or you'll get precision issues.
+		10000000.0f     // Far clipping plane. Keep as little as possible.
 	);
+
 	// Whats wrong with this?
 	// glm::mat4 projection( glm::ortho(0, width, height, 0, 0, 100) );
 	glUniformMatrix4fv(ProjectionUniform, 1, GL_FALSE, &projection[0][0]);
@@ -297,42 +310,8 @@ void Render() {
 	glUniform4f(VertexColorUniform, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	numPoints = 0;
-	ReadVerticesFromBTT(TreeOne, 0, 0, w, 0, 0, h); 
-	ReadVerticesFromBTT(TreeTwo, w, h, 0, h, w, 0); 
-
-	cout << "\nTotal Leaves: " << totalLeaves << "\n";
-	totalLeaves = 0;
-
-	/*
-	for (unsigned int i = 0; i < 1; ++i) {
-
-		vertices[numPoints+0] = glm::vec3(0, 0, 0);
-		vertices[numPoints+1] = glm::vec3(w, 0, 0);
-
-		vertices[numPoints+2] = glm::vec3(w, 0, 0);
-		vertices[numPoints+3] = glm::vec3(0, 0, h);
-
-		vertices[numPoints+4] = glm::vec3(0, 0, h);
-		vertices[numPoints+5] = glm::vec3(0, 0, 0);
-
-		numPoints+=6;
-
-	}
-
-	for (unsigned int i = 0; i < 1; ++i) {
-
-		vertices[numPoints+0] = glm::vec3(w, 0, 0);
-		vertices[numPoints+1] = glm::vec3(w, 0, h);
-
-		vertices[numPoints+2] = glm::vec3(w, 0, h);
-		vertices[numPoints+3] = glm::vec3(0, 0, h);
-
-		vertices[numPoints+4] = glm::vec3(0, 0, h);
-		vertices[numPoints+5] = glm::vec3(0, 0, 0);
-
-		numPoints+=6;
-	}
-	*/
+	ReadVerticesFromBTT(TreeOne, 0, 0, w, 0, 0, h, 0); 
+	ReadVerticesFromBTT(TreeTwo, w, h, 0, h, w, 0, 0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbID);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), &vertices[0]);
@@ -358,6 +337,10 @@ int main() {
 	if (!InitializeWindow()) {
 		return 1;	
 	}
+
+	LoadHeightmap();
+	InitTrees();
+
 	// Initializes random number seed.
 	srand(time(NULL));
 
